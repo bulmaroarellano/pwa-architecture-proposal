@@ -90,6 +90,9 @@ erDiagram
     CardGroup {
         bigint id PK
         string nombre
+        string recovery_email_hash "Para recuperar si se borra PWA"
+        string recovery_phone_hash "Para recuperar si se borra PWA"
+
     }
 
     CardGroupMember {

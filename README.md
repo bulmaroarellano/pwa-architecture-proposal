@@ -32,6 +32,8 @@ erDiagram
 El contenedor central.
 *   `id`: PK
 *   `uuid`: Identificador único público.
+*   `recovery_email_hash`: Hash para recuperar por correo.
+*   `recovery_phone_hash`: Hash para recuperar por teléfono.
 
 #### `PwaGiftCardBackup` (La PWA)
 Ahora contiene referencia directa al grupo activo.
@@ -73,3 +75,12 @@ Maneja el flujo de "Pedir permiso al celular viejo".
 1.  Usuario hace login.
 2.  Sistema busca su Grupo único en `Account_CardGroup_Rel`.
 3.  La PWA actual se actualiza para apuntar a ese Grupo.
+
+### C. Recuperación (PWA Borrada / Datos Perdidos)
+Si el usuario borra los datos, pierde su "identidad de dispositivo". Para recuperar el grupo:
+1.  **Detección**: Usuario ingresa a una liga de tarjeta del grupo o intenta "recuperar" manualmente.
+2.  **Opción Contacto**: Si el `CardGroup` tiene `recovery_email` o `recovery_phone`:
+    *   Sistema envía OTP (Código) al medio de contacto.
+    *   Si usuario ingresa el código correcto -> El Nuevo Dispositivo toma posesión del Grupo.
+3.  **Opción Cuenta**: Si el usuario hace Login, aplica el Flujo B.
+
