@@ -61,15 +61,17 @@ Maneja el flujo de "Pedir permiso al celular viejo".
 
 ## Flujos Críticos
 
-### A. Agregar Tarjeta en Dispositivo Nuevo
-1.  Usuario escanea QR o abre link de tarjeta.
-2.  Sistema detecta que la PWA no tiene grupo.
-3.  Sistema detecta que la Tarjeta YA pertenece a un Grupo (`Grupo A`).
-4.  **Bloqueo**: No se puede mostrar el grupo inmediatamente.
-5.  **Solicitud**: Se crea `DeviceAuthorizationRequest` para el `Grupo A`.
-6.  **Notificación**: Se notifica a la PWA que tiene el `Grupo A` activo (Authorizing PWA).
-7.  **Acción**: Usuario en dispositivo viejo da "Aprobar".
-8.  **Resultado**: El Dispositivo Nuevo actualiza su `card_group_id` a `Grupo A`.
+### A. Agregar Tarjeta en Dispositivo Nuevo (Lógica)
+1.  **Tarjeta Nueva (Sin Grupo)**:
+    *   Si el Dispositivo NO tiene grupo -> Se crea un NUEVO Grupo para el Dispositivo y se agrega la tarjeta. (Sin permiso).
+    *   Si el Dispositivo YA tiene grupo -> Se agrega la tarjeta a su Grupo actual. (Sin permiso).
+    
+2.  **Tarjeta con Grupo Existente**:
+    *   Si el Grupo de la tarjeta == Grupo del Dispositivo -> Se agrega/actualiza vista. (Sin permiso).
+    *   Si el Grupo de la tarjeta != Grupo del Dispositivo:
+        *   **Conflicto**: El dispositivo quiere reclamar un grupo que es de otro.
+        *   **Solicitud**: Se activa el flujo de `DeviceAuthorizationRequest` hacia el dueño actual del grupo.
+
 
 ### B. Usuario Registrado y PWA
 1.  Usuario hace login.
