@@ -50,7 +50,7 @@ Tabla 1:1.
 #### `DeviceAuthorizationRequest` (NUEVO: Seguridad)
 Maneja el flujo de "Pedir permiso al celular viejo".
 *   `id`: PK
-*   `card_group_id`: El grupo que se quiere “robar” o “clonar”.
+*   `card_group_id`: El grupo que se quiere **Unificar** o acceder.
 *   `requesting_pwa_id`: El nuevo dispositivo.
 *   `authorizing_pwa_id`: El dispositivo anterior (que debe aprobar).
 *   `status`: 'PENDING', 'APPROVED', 'DENIED'.
