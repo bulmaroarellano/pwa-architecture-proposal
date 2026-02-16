@@ -88,16 +88,4 @@ Si el usuario borra los datos, pierde su "identidad de dispositivo". Para recupe
 3.  **Opción Cuenta**: Si el usuario hace Login, aplica el Flujo B.
 
 
-### D. Escenarios de Bloqueo y Fallback (Casos Borde)
-El flujo de "Autorización del Portador Anterior" puede fallar si el dispositivo se pierde o el usuario no responde.
-**Soluciones:**
-1.  **Timeout**: La solicitud (`DeviceAuthorizationRequest`) expira en X tiempo (ej. 15 min). Si expira, se le ofrece al usuario la **Opción de Recuperación por Contacto**.
-2.  **Dispositivo Perdido/Robado**:
-    *   Si el usuario no puede autorizar, puede usar la opción **"Perdí mi dispositivo"**.
-    *   Esto detona el envío de un **Magic Link** a su `recovery_email` o `recovery_phone` registrado en el Grupo.
 
-3.  **Mismo Usuario, Nuevo Teléfono**:
-    *   Si el usuario registró su correo, simplemente usa la opción "Recuperar por Correo".
-    *   Si NO registró correo ni teléfono: **El grupo queda huérfano y bloqueado**. (Se debe enfatizar al usuario que registre un medio de contacto).
-4.  **Escalamiento**:
-    *   En última instancia, soporte técnico puede validar identidad offline y transferir el grupo manualmente.
