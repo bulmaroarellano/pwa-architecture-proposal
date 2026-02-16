@@ -1,40 +1,46 @@
-# Diagramas ER Enfocados: Arquitectura "Grupo de Tarjetas"
+# Diagramas ER Enfocados: Arquitectura "Grupo de Tarjetas" (V2)
 
-Para facilitar la lectura, he dividido el diagrama en partes más pequeñas y específicas.
+Diagramas actualizados según reglas de negocio estrictas:
+1.  **1 PWA = 1 Grupo**.
+2.  **1 Usuario = 1 Grupo**.
+3.  **Flujo de Autorización entre Dispositivos**.
 
 ## 1. Vista General (Simplificada)
-Muestra solo las entidades principales y cómo se conectan. Ideal para entender la arquitectura a grandes rasgos.
 
 ```mermaid
 erDiagram
-    CardGroup ||--o{ ValeRegaloComprado : "contiene"
+    CardGroup ||--o{ CardGroupMember : "contiene tarjetas"
     
-    PwaGiftCardBackup ||--o{ Pwa_CardGroup_Rel : "gestiona"
-    CardGroup ||--o{ Pwa_CardGroup_Rel : "se ve en"
+    PwaGiftCardBackup }|--|| CardGroup : "visualiza (1 grupo máx)"
     
-    Tarjetahabiente ||--o{ Account_CardGroup_Rel : "posee"
-    CardGroup ||--o{ Account_CardGroup_Rel : "propiedad de"
+    Tarjetahabiente ||--|| Account_CardGroup_Rel : "se vincula (1:1)"
+    CardGroup ||--|| Account_CardGroup_Rel : "pertenece a (1:1)"
+
+    PwaGiftCardBackup ||--o{ DeviceAuthorizationRequest : "solicita/autoriza"
 ```
 
 ---
 
-## 2. Detalle: Lado PWA (Dispositivo)
-Enfocado en cómo el dispositivo (PWA) se conecta al Grupo de Tarjetas.
+## 2. Detalle: PWA y Autorización
+Muestra que una PWA solo puede tener un Grupo activo y el mecanismo de seguridad para cambiar de dispositivo.
 
 ```mermaid
 classDiagram
     class PwaGiftCardBackup {
         +bigint id
         +string device_id
-        +datetime last_seen_at
+        +bigint card_group_id FK "Grupo Activo (Solo 1)"
+        +string fingerprint
     }
 
-    class Pwa_CardGroup_Rel {
+    class DeviceAuthorizationRequest {
         +bigint id
-        +bigint pwa_id
         +bigint card_group_id
-        +datetime ligado_at
-        +boolean is_active
+        +bigint requesting_pwa_id "Nuevo Dispositivo"
+        +bigint authorizing_pwa_id "Dispositivo Anterior"
+        +string token
+        +enum status "PENDING, APPROVED, DENIED"
+        +datetime expires_at
     }
 
     class CardGroup {
@@ -42,62 +48,63 @@ classDiagram
         +string nombre
     }
 
-    PwaGiftCardBackup "1" --> "*" Pwa_CardGroup_Rel : tiene
-    Pwa_CardGroup_Rel "*" --> "1" CardGroup : apunta a
+    PwaGiftCardBackup "*" --> "1" CardGroup : visualiza
+    PwaGiftCardBackup "1" --> "*" DeviceAuthorizationRequest : crea solicitud
 ```
 
 ---
 
-## 3. Detalle: Lado Cuenta (Usuario)
-Enfocado en cómo el usuario registrado se conecta al Grupo de Tarjetas para reclamar propiedad.
+## 3. Detalle: Usuario y Grupo (Relación 1 a 1)
+Regla estricta: Un usuario solo puede tener un grupo ligado.
 
 ```mermaid
 classDiagram
     class Tarjetahabiente {
         +bigint id
         +string email
-        +string nombre
     }
 
     class Account_CardGroup_Rel {
         +bigint id
-        +bigint th_id
-        +bigint card_group_id
+        +bigint th_id FK
+        +bigint card_group_id FK
         +datetime ligado_at
-        +string rol
     }
 
     class CardGroup {
         +bigint id
-        +string nombre
+        +string uuid
     }
 
-    Tarjetahabiente "1" --> "*" Account_CardGroup_Rel : tiene
-    Account_CardGroup_Rel "*" --> "1" CardGroup : vincula
+    Tarjetahabiente "1" --> "1" Account_CardGroup_Rel : tiene
+    CardGroup "1" --> "1" Account_CardGroup_Rel : propiedad de
 ```
 
 ---
 
-## 4. Detalle: Grupo y sus Tarjetas
-Muestra la estructura interna del Grupo y las Tarjetas que contiene.
+## 4. Detalle: Miembros del Grupo
+Relación entre las tarjetas y el grupo. Se usa una tabla intermedia `CardGroupMember` para flexibilidad.
 
 ```mermaid
 erDiagram
     CardGroup {
         bigint id PK
         string nombre
-        string uuid
-        datetime created_at
+    }
+
+    CardGroupMember {
+        bigint id PK
+        bigint card_group_id FK
+        bigint vale_regalo_id FK
+        datetime added_at
     }
 
     ValeRegaloComprado {
         bigint id PK
-        bigint card_group_id FK
         string folio
         decimal monto
-        int estatus
-        datetime fecha_vencimiento
     }
 
-    CardGroup ||--o{ ValeRegaloComprado : "contiene (1:N)"
+    CardGroup ||--o{ CardGroupMember : "tiene"
+    ValeRegaloComprado ||--o{ CardGroupMember : "es parte de"
 ```

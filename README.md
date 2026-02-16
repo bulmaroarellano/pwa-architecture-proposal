@@ -1,121 +1,75 @@
-# Propuesta de Arquitectura: Grupos de Tarjetas para PWA
+# Propuesta de Arquitectura: Grupos de Tarjetas para PWA (V2)
 
 ## Resumen
-Esta propuesta describe una nueva arquitectura para la gestión de tarjetas de regalo en la PWA, desacoplando la identidad del dispositivo (PWA) de la identidad del usuario (Cuenta Social). Se introduce el concepto de **Grupo de Tarjetas** (`CardGroup`) como entidad central.
+Arquitectura actualizada para la gestión de tarjetas en PWA, incorporando **reglas de negocio estrictas** y un **flujo de seguridad por autorización de dispositivos**.
 
-## Problema Actual
-Actualmente, existe una relación directa o confusa entre los respaldos de PWA y los usuarios, lo que complica escenarios como:
-*   Usuarios anónimos (sin cuenta) que quieren guardar tarjetas.
-*   Usuarios que cambian de dispositivo y quieren recuperar sus tarjetas fácilmente.
-*   Usuarios con múltiples dispositivos.
-
-## Solución Propuesta: "Card Groups"
-Crear una entidad intermedia `CardGroup` que agrupa las tarjetas.
-*   **La PWA (Dispositivo)** se conecta a un Grupo.
-*   **El Usuario (Cuenta)** reclama la propiedad de un Grupo.
-*   Las tarjetas pertenecen al Grupo, no al usuario ni al dispositivo directamente.
+## Reglas de Negocio (Actualizadas)
+1.  **Unicidad PWA**: Una PWA (Dispositivo) solo puede estar visualizando **un solo Grupo de Tarjetas** a la vez.
+2.  **Unicidad Usuario**: Un Usuario (Tarjetahabiente) solo puede ser dueño de **un solo Grupo de Tarjetas**.
+3.  **Seguridad**: Para migrar un grupo a un nuevo dispositivo (PWA), el dispositivo anterior (Master) debe autorizar la operación.
 
 ---
 
 ## Diagramas de Arquitectura
 
 ### 1. Vista General
-Muestra las entidades principales y sus relaciones de alto nivel.
 
 ```mermaid
 erDiagram
-    CardGroup ||--o{ ValeRegaloComprado : "contiene"
+    CardGroup ||--o{ CardGroupMember : "contiene tarjetas"
     
-    PwaGiftCardBackup ||--o{ Pwa_CardGroup_Rel : "gestiona"
-    CardGroup ||--o{ Pwa_CardGroup_Rel : "se visualiza en"
+    PwaGiftCardBackup }|--|| CardGroup : "visualiza (1 máx)"
     
-    Tarjetahabiente ||--o{ Account_CardGroup_Rel : "posee"
-    CardGroup ||--o{ Account_CardGroup_Rel : "propiedad de"
+    Tarjetahabiente ||--|| Account_CardGroup_Rel : "se vincula (1:1)"
+    CardGroup ||--|| Account_CardGroup_Rel : "pertenece a (1:1)"
+
+    PwaGiftCardBackup ||--o{ DeviceAuthorizationRequest : "gestiona acceso"
 ```
 
-### 2. Detalle: Conexión PWA (Dispositivo)
-Cómo un dispositivo físico (móvil/desktop) accede a las tarjetas. Puede haber múltiples dispositivos viendo el mismo grupo.
+### 2. Tablas Principales
 
-```mermaid
-classDiagram
-    class PwaGiftCardBackup {
-        +bigint id
-        +string device_id
-        +datetime last_seen_at
-    }
+#### `CardGroup`
+El contenedor central.
+*   `id`: PK
+*   `uuid`: Identificador único público.
 
-    class Pwa_CardGroup_Rel {
-        +bigint id
-        +bigint pwa_id
-        +bigint card_group_id
-        +datetime ligado_at
-        +boolean is_active
-    }
+#### `PwaGiftCardBackup` (La PWA)
+Ahora contiene referencia directa al grupo activo.
+*   `id`: PK
+*   `device_id`: Huella del dispositivo.
+*   `card_group_id`: FK hacia `CardGroup`. (Regla: 1 PWA -> 1 Grupo).
+*   `is_master_device`: Booleano, indica si este dispositivo puede autorizar a otros.
 
-    class CardGroup {
-        +bigint id
-        +string nombre
-    }
+#### `Account_CardGroup_Rel` (Vinculación Usuario)
+Tabla 1:1.
+*   `th_id`: FK Usuario.
+*   `card_group_id`: FK Grupo.
 
-    PwaGiftCardBackup "1" --> "*" Pwa_CardGroup_Rel : tiene
-    Pwa_CardGroup_Rel "*" --> "1" CardGroup : apunta a
-```
-
-### 3. Detalle: Conexión Usuario (Cuenta)
-Cómo un usuario registrado toma posesión de un grupo. Esto habilita beneficios, recuperación en nuevos dispositivos y seguridad.
-
-```mermaid
-classDiagram
-    class Tarjetahabiente {
-        +bigint id
-        +string email
-        +string nombre
-    }
-
-    class Account_CardGroup_Rel {
-        +bigint id
-        +bigint th_id
-        +bigint card_group_id
-        +datetime ligado_at
-        +string rol
-    }
-
-    class CardGroup {
-        +bigint id
-        +string nombre
-    }
-
-    Tarjetahabiente "1" --> "*" Account_CardGroup_Rel : tiene
-    Account_CardGroup_Rel "*" --> "1" CardGroup : vincula
-```
-
-### 4. Detalle: Estructura del Grupo
-La relación entre el grupo y las tarjetas individuales (`ValeRegaloComprado`).
-
-```mermaid
-erDiagram
-    CardGroup {
-        bigint id PK
-        string nombre "Nombre opcional"
-        string uuid "ID único global"
-        datetime created_at
-    }
-
-    ValeRegaloComprado {
-        bigint id PK
-        bigint card_group_id FK
-        string folio
-        decimal monto
-        int estatus
-        datetime fecha_vencimiento
-    }
-
-    CardGroup ||--o{ ValeRegaloComprado : "contiene (1:N)"
-```
+#### `DeviceAuthorizationRequest` (NUEVO: Seguridad)
+Maneja el flujo de "Pedir permiso al celular viejo".
+*   `id`: PK
+*   `card_group_id`: El grupo que se quiere “robar” o “clonar”.
+*   `requesting_pwa_id`: El nuevo dispositivo.
+*   `authorizing_pwa_id`: El dispositivo anterior (que debe aprobar).
+*   `status`: 'PENDING', 'APPROVED', 'DENIED'.
+*   `token`: Token para validar la acción.
+*   `expires_at`: Ventana de tiempo para autorizar (ej. 15 min).
 
 ---
 
-## Beneficios Principales
-1.  **Flexibilidad**: Permite uso anónimo inmediato (creando un Grupo sin dueño) y registro posterior (asignando dueño al Grupo).
-2.  **Multidispositivo**: Un usuario puede escanear un QR en otro dispositivo y "sincronizar" el grupo fácilmente.
-3.  **Simplicidad**: La lógica de negocio (vencimientos, saldos) se mantiene en `ValeRegaloComprado`, pero la agrupación se gestiona limpiamente en `CardGroup`.
+## Flujos Críticos
+
+### A. Agregar Tarjeta en Dispositivo Nuevo
+1.  Usuario escanea QR o abre link de tarjeta.
+2.  Sistema detecta que la PWA no tiene grupo.
+3.  Sistema detecta que la Tarjeta YA pertenece a un Grupo (`Grupo A`).
+4.  **Bloqueo**: No se puede mostrar el grupo inmediatamente.
+5.  **Solicitud**: Se crea `DeviceAuthorizationRequest` para el `Grupo A`.
+6.  **Notificación**: Se notifica a la PWA que tiene el `Grupo A` activo (Authorizing PWA).
+7.  **Acción**: Usuario en dispositivo viejo da "Aprobar".
+8.  **Resultado**: El Dispositivo Nuevo actualiza su `card_group_id` a `Grupo A`.
+
+### B. Usuario Registrado y PWA
+1.  Usuario hace login.
+2.  Sistema busca su Grupo único en `Account_CardGroup_Rel`.
+3.  La PWA actual se actualiza para apuntar a ese Grupo.
