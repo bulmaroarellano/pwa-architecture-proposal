@@ -3,10 +3,10 @@
 ## Resumen
 Arquitectura actualizada para la gestión de tarjetas en PWA, incorporando **reglas de negocio estrictas** y un **flujo de seguridad por autorización de dispositivos**.
 
-## Reglas de Negocio (Actualizadas)
-1.  **Unicidad PWA**: Una PWA (Dispositivo) solo puede estar visualizando **un solo Grupo de Tarjetas** a la vez.
-2.  **Unicidad Usuario**: Un Usuario (Tarjetahabiente) solo puede ser dueño de **un solo Grupo de Tarjetas**.
-3.  **Seguridad**: Para migrar un grupo a un nuevo dispositivo (PWA), el dispositivo anterior (Master) debe autorizar la operación.
+## Reglas de Negocio (Flexibles)
+1.  **Multi-Grupo PWA**: Una PWA (Dispositivo) puede visualizar **múltiples Grupos de Tarjetas**.
+2.  **Multi-Grupo Usuario**: Un Usuario puede ser dueño de **múltiples Grupos**.
+3.  **Seguridad**: Para migrar un grupo ajeno, se requiere autorización.
 
 ---
 
@@ -18,10 +18,11 @@ Arquitectura actualizada para la gestión de tarjetas en PWA, incorporando **reg
 erDiagram
     CardGroup ||--o{ CardGroupMember : "contiene tarjetas"
     
-    PwaGiftCardBackup }|--|| CardGroup : "visualiza (1 máx)"
+    PwaGiftCardBackup }|--|{ Pwa_CardGroup_Rel : "visualiza (N)"
+    CardGroup ||--|{ Pwa_CardGroup_Rel : "visible en (N)"
     
-    Tarjetahabiente ||--|| Account_CardGroup_Rel : "se vincula (1:1)"
-    CardGroup ||--|| Account_CardGroup_Rel : "pertenece a (1:1)"
+    Tarjetahabiente ||--|{ Account_CardGroup_Rel : "posee (N)"
+    CardGroup ||--|| Account_CardGroup_Rel : "pertenece a (1 Dueño)"
 
     PwaGiftCardBackup ||--o{ DeviceAuthorizationRequest : "gestiona acceso"
 ```
@@ -36,14 +37,18 @@ El contenedor central.
 *   `recovery_phone_hash`: Hash para recuperar por teléfono.
 
 #### `PwaGiftCardBackup` (La PWA)
-Ahora contiene referencia directa al grupo activo.
 *   `id`: PK
 *   `device_id`: Huella del dispositivo.
-*   `card_group_id`: FK hacia `CardGroup`. (Regla: 1 PWA -> 1 Grupo).
-*   `is_master_device`: Booleano, indica si este dispositivo puede autorizar a otros.
+*   `is_master_device`: Booleano.
+
+#### `Pwa_CardGroup_Rel` (Pivot PWA - Grupo)
+Tabla intermedia N:M.
+*   `pwa_id`: FK Dispositivo.
+*   `card_group_id`: FK Grupo.
+*   `is_active`: Booleano (grupo activo actual para vista).
 
 #### `Account_CardGroup_Rel` (Vinculación Usuario)
-Tabla 1:1.
+Tabla N:1 (Un Usuario puede tener N Grupos, pero un Grupo es de 1 Usuario).
 *   `th_id`: FK Usuario.
 *   `card_group_id`: FK Grupo.
 

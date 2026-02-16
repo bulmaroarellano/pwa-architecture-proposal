@@ -1,8 +1,8 @@
 # Diagramas ER Enfocados: Arquitectura "Grupo de Tarjetas" (V2)
 
-Diagramas actualizados según reglas de negocio estrictas:
-1.  **1 PWA = 1 Grupo**.
-2.  **1 Usuario = 1 Grupo**.
+Diagramas actualizados según reglas de negocio flexibles:
+1.  **1 PWA = N Grupos**.
+2.  **1 Usuario = N Grupos**.
 3.  **Flujo de Autorización entre Dispositivos**.
 
 ## 1. Vista General (Simplificada)
@@ -11,10 +11,11 @@ Diagramas actualizados según reglas de negocio estrictas:
 erDiagram
     CardGroup ||--o{ CardGroupMember : "contiene tarjetas"
     
-    PwaGiftCardBackup }|--|| CardGroup : "visualiza (1 grupo máx)"
+    PwaGiftCardBackup }|--|{ Pwa_CardGroup_Rel : "visualiza (N)"
+    CardGroup ||--|{ Pwa_CardGroup_Rel : "se ve en (N)"
     
-    Tarjetahabiente ||--|| Account_CardGroup_Rel : "se vincula (1:1)"
-    CardGroup ||--|| Account_CardGroup_Rel : "pertenece a (1:1)"
+    Tarjetahabiente ||--|{ Account_CardGroup_Rel : "posee (N)"
+    CardGroup ||--|| Account_CardGroup_Rel : "pertenece a (1 Dueño)"
 
     PwaGiftCardBackup ||--o{ DeviceAuthorizationRequest : "solicita/autoriza"
 ```
@@ -22,15 +23,21 @@ erDiagram
 ---
 
 ## 2. Detalle: PWA y Autorización
-Muestra que una PWA solo puede tener un Grupo activo y el mecanismo de seguridad para cambiar de dispositivo.
+Muestra que una PWA puede tener múltiples grupos.
 
 ```mermaid
 classDiagram
     class PwaGiftCardBackup {
         +bigint id
         +string device_id
-        +bigint card_group_id FK "Grupo Activo (Solo 1)"
         +string fingerprint
+    }
+
+    class Pwa_CardGroup_Rel {
+        +bigint id
+        +bigint pwa_id
+        +bigint card_group_id
+        +boolean is_active "Si este es el grupo visible actual"
     }
 
     class DeviceAuthorizationRequest {
@@ -38,9 +45,7 @@ classDiagram
         +bigint card_group_id
         +bigint requesting_pwa_id "Nuevo Dispositivo"
         +bigint authorizing_pwa_id "Dispositivo Anterior"
-        +string token
-        +enum status "PENDING, APPROVED, DENIED"
-        +datetime expires_at
+        +enum status
     }
 
     class CardGroup {
@@ -48,14 +53,15 @@ classDiagram
         +string nombre
     }
 
-    PwaGiftCardBackup "*" --> "1" CardGroup : visualiza
+    PwaGiftCardBackup "1" --> "*" Pwa_CardGroup_Rel : tiene
+    Pwa_CardGroup_Rel "*" --> "1" CardGroup : apunta a
     PwaGiftCardBackup "1" --> "*" DeviceAuthorizationRequest : crea solicitud
 ```
 
 ---
 
-## 3. Detalle: Usuario y Grupo (Relación 1 a 1)
-Regla estricta: Un usuario solo puede tener un grupo ligado.
+## 3. Detalle: Usuario y Grupo (Relación 1 a N)
+Un usuario puede ser dueño de múltiples grupos.
 
 ```mermaid
 classDiagram
@@ -76,8 +82,8 @@ classDiagram
         +string uuid
     }
 
-    Tarjetahabiente "1" --> "1" Account_CardGroup_Rel : tiene
-    CardGroup "1" --> "1" Account_CardGroup_Rel : propiedad de
+    Tarjetahabiente "1" --> "*" Account_CardGroup_Rel : tiene
+    Account_CardGroup_Rel "*" --> "*" CardGroup : vinculado
 ```
 
 ---
