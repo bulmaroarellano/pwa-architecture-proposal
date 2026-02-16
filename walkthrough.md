@@ -23,7 +23,7 @@ Basado en las instrucciones de audio, se introdujo el concepto de **Grupo de Tar
 | :--- | :--- | :--- |
 | `propuesta_arquitectura_pwa.md` | **Documento Principal**. Propuesta formal con diagramas divididos y explicación de negocio. | **Para Enviar/Aprobar** |
 | `pwa_group_er_diagram_focused.md` | Contiene los diagramas divididos (Vista General, PWA, Cuenta, Detalle) para mejor lectura. | Referencia Visual |
-| `pwa_group_er_diagram.md` | Diagrama técnico completo (versión monolítica). | Referencia Técnica |
+
 
 ## Diagrama de Alto Nivel
 La arquitectura final se basa en la independencia de la PWA y la Cuenta, unidas por el Grupo:
