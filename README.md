@@ -78,12 +78,13 @@ Maneja el flujo de "Pedir permiso al celular viejo".
 2.  Sistema busca su Grupo único en `Account_CardGroup_Rel`.
 3.  La PWA actual se actualiza para apuntar a ese Grupo.
 
+
 ### C. Recuperación (PWA Borrada / Datos Perdidos)
 Si el usuario borra los datos, pierde su "identidad de dispositivo". Para recuperar el grupo:
 1.  **Detección**: Usuario ingresa a una liga de tarjeta del grupo o intenta "recuperar" manualmente.
 2.  **Opción Contacto**: Si el `CardGroup` tiene `recovery_email` o `recovery_phone`:
-    *   Sistema envía OTP (Código) al medio de contacto.
-    *   Si usuario ingresa el código correcto -> El Nuevo Dispositivo toma posesión del Grupo.
+    *   Sistema envía un **Magic Link** al medio de contacto.
+    *   Si usuario hace clic en el enlace -> El Nuevo Dispositivo toma posesión del Grupo.
 3.  **Opción Cuenta**: Si el usuario hace Login, aplica el Flujo B.
 
 
@@ -93,7 +94,8 @@ El flujo de "Autorización del Portador Anterior" puede fallar si el dispositivo
 1.  **Timeout**: La solicitud (`DeviceAuthorizationRequest`) expira en X tiempo (ej. 15 min). Si expira, se le ofrece al usuario la **Opción de Recuperación por Contacto**.
 2.  **Dispositivo Perdido/Robado**:
     *   Si el usuario no puede autorizar, puede usar la opción **"Perdí mi dispositivo"**.
-    *   Esto detona el envío de OTP a su `recovery_email` o `recovery_phone` registrado en el Grupo.
+    *   Esto detona el envío de un **Magic Link** a su `recovery_email` o `recovery_phone` registrado en el Grupo.
+
 3.  **Mismo Usuario, Nuevo Teléfono**:
     *   Si el usuario registró su correo, simplemente usa la opción "Recuperar por Correo".
     *   Si NO registró correo ni teléfono: **El grupo queda huérfano y bloqueado**. (Se debe enfatizar al usuario que registre un medio de contacto).
